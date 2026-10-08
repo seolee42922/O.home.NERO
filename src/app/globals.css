@@ -1938,75 +1938,50 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 }
 
 /* deco 이미지 위젯 - 책장 넘김 효과 */
-
-.deco-flip-stage{
-  position:absolute;
-  inset:0;
-  transform-style:preserve-3d;
+.deco-flip-page {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(0deg);
+  will-change: transform;
 }
 
-.deco-flip-page{
-  position:absolute;
-  inset:0;
-  overflow:hidden;
-  backface-visibility:hidden;
-  transform-style:preserve-3d;
+.deco-flip-page.is-flipping {
+  animation-name: decoPageTurn;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
 }
 
-.deco-flip-single{
-  position:absolute;
-  inset:0;
-}
-
-.deco-flip-back{
-  z-index:1;
-}
-
-.deco-flip-front{
-  z-index:2;
-  transform-origin:left center;
-  box-shadow:0 8px 24px rgba(0,0,0,.16);
-}
-
-.deco-flip-front.is-flipping{
-  animation-name:decoPageTurn;
-  animation-timing-function:cubic-bezier(.42,.02,.22,1);
-  animation-fill-mode:forwards;
-}
-
-.deco-flip-front.is-flipping::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(
-      to right,
-      rgba(0,0,0,.18) 0%,
-      rgba(0,0,0,.08) 14%,
-      rgba(255,255,255,.08) 42%,
-      rgba(0,0,0,.10) 100%
-    );
-}
-
-@keyframes decoPageTurn{
-  0%{
-    transform:rotateY(0deg);
-    box-shadow:0 8px 24px rgba(0,0,0,.16);
+@keyframes decoPageTurn {
+  from {
+    transform: rotateY(0deg);
   }
-  45%{
-    box-shadow:-10px 10px 28px rgba(0,0,0,.20);
-  }
-  100%{
-    transform:rotateY(-180deg);
-    box-shadow:-18px 12px 30px rgba(0,0,0,.08);
+
+  to {
+    transform: rotateY(-180deg);
   }
 }
 
-@media (prefers-reduced-motion: reduce){
-  .deco-flip-front.is-flipping{
-    animation-duration:.01ms !important;
+@media (prefers-reduced-motion: reduce) {
+  .deco-flip-page.is-flipping {
+    animation-duration: 0.01ms !important;
   }
+}
+
+
+.gallery-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  align-items: start;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--panel-solid);
 }
 
 
@@ -2028,7 +2003,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   border: none;
   border-left: 1px solid var(--line);
   border-radius: 0;
-  background: transparent;
+  background: var(--panel-solid);
 }
 
 .gallery-comments > h4 span {

@@ -565,15 +565,19 @@ function ContainImg({ fileRef, rounded, onActivate }: {
   );
 }
 
+
 export function DecoWidget({ conf }: { conf: WidgetConf }) {
   const { isAdmin } = useAuth();
   const { editOn } = useMainStore();
   const router = useRouter();
+
   const [open, setOpen] = useState(false);
+
   const rounded = (conf.settings.rounded as boolean) ?? true;
   const fit = (conf.settings.fit as 'cover' | 'contain') ?? 'cover';
   const slides = decoSlides(conf.settings);
   const sec = (conf.settings.interval as number) ?? 5;
+  const autoPlay = (conf.settings.autoPlay as boolean) ?? true;
 
   const [idx, setIdx] = useState(0);
   const [prevIdx, setPrevIdx] = useState<number | null>(null);
@@ -581,92 +585,92 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
 
   const FLIP_MS = 950;
 
-  const currentIdx = slides.length ? Math.min(idx, slides.length - 1) : 0;
-  const current = slides[currentIdx];
-  const prev =
-    prevIdx == null || !slides.length
-      ? null
-      : slides[Math.min(prevIdx, slides.length - 1)];
+  const currentIdx =
+    slides.length > 0 ? Math.min(idx, slides.length - 1) : 0;
 
-  const goToLink = useCallback((link?: string) => {
-    if (editOn || !link) return;
-    const l = normalizeInternalLink(link);
-    if (/^https?:\/\//.test(l)) window.open(l, '_blank');
-    else router.push(l);
-  }, [editOn, router]);
+  const goToLink = useCallback(
+    (link?: string) => {
+      if (editOn || !link) return;
 
-  const renderSlide = useCallback((
-    sl: { imgId: string; crop?: CropValue; link?: string } | undefined,
-    clickable: boolean
-  ) => {
-    if (!sl) return null;
-    const activate = clickable && sl.link ? () => goToLink(sl.link) : undefined;
+      const href = normalizeInternalLink(link);
 
-    if (fit === 'contain') {
-      return (
-        <ContainImg
-          fileRef={sl.imgId}
-          rounded={rounded}
-          onActivate={activate}
-        />
-      );
+      if (/^https?:\/\//.test(href)) {
+        window.open(href, '_blank');
+      } else {
+        router.push(href);
+      }
+    },
+    [editOn, router]
+  );
+
+  const startFlip = useCallback(
+    (nextIdx: number) => {
+      if (slides.length < 2 || flipping || editOn || open) return;
+
+      const next =
+        ((nextIdx % slides.length) + slides.length) %
+        slides.length;
+
+      if (next === currentIdx) return;
+
+      setPrevIdx(currentIdx);
+      setIdx(next);
+      setFlipping(true);
+    },
+    [slides.length, flipping, editOn, open, currentIdx]
+  );
+
+  // 자동 슬라이드
+  useEffect(() => {
+    if (
+      !autoPlay ||
+      slides.length < 2 ||
+      editOn ||
+      open ||
+      flipping
+    ) {
+      return;
     }
 
-    return (
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          cursor: activate ? 'var(--cur-pointer,pointer)' : undefined,
-        }}
-        onClick={activate}
-      >
-        <CroppedBlobImg fileRef={sl.imgId} crop={sl.crop} ph="" />
-      </div>
-    );
-  }, [fit, rounded, goToLink]);
-
-  const startFlip = useCallback((nextIdx: number) => {
-    if (slides.length < 2) return;
-
-    const normalized =
-      ((nextIdx % slides.length) + slides.length) % slides.length;
-
-    if (flipping || normalized === currentIdx) return;
-
-    setPrevIdx(currentIdx);
-    setIdx(normalized);
-    setFlipping(true);
-  }, [slides.length, flipping, currentIdx]);
-
-  // 자동 넘김
-  useEffect(() => {
-    if (slides.length < 2 || editOn || open || flipping) return;
-
-    const t = window.setTimeout(() => {
-      startFlip((currentIdx + 1) % slides.length);
+    const timer = window.setTimeout(() => {
+      startFlip(currentIdx + 1);
     }, Math.max(2, sec) * 1000);
 
-    return () => window.clearTimeout(t);
-  }, [slides.length, sec, editOn, open, flipping, currentIdx, startFlip]);
+    return () => window.clearTimeout(timer);
+  }, [
+    autoPlay,
+    slides.length,
+    sec,
+    editOn,
+    open,
+    flipping,
+    currentIdx,
+    startFlip,
+  ]);
 
-  // 넘김 애니메이션 종료 처리
+  // 책장 넘김 종료
   useEffect(() => {
     if (!flipping) return;
 
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setFlipping(false);
       setPrevIdx(null);
     }, FLIP_MS);
 
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [flipping]);
 
-  // 슬라이드 개수 변경 시 인덱스 보정
+  // 이미지 개수가 바뀌어도 인덱스 유지
   useEffect(() => {
-    if (idx >= slides.length) setIdx(0);
-    if (prevIdx != null && prevIdx >= slides.length) setPrevIdx(null);
-  }, [slides.length, idx, prevIdx]);
+    if (idx >= slides.length) {
+      setIdx(0);
+    }
+
+    if (prevIdx !== null && prevIdx >= slides.length) {
+      setPrevIdx(null);
+      setFlipping(false);
+    }
+  }, [idx, prevIdx, slides.length]);
 
   useEditEvent(conf.id, () => setOpen(true));
 
@@ -679,69 +683,130 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
       style={{
         position: 'relative',
         overflow: 'hidden',
+        isolation: 'isolate',
         width: wPx ? `${wPx}px` : '100%',
         maxWidth: '100%',
         height: hPx ? `${hPx}px` : '100%',
         minHeight: hPx ? undefined : 80,
         margin: wPx ? '0 auto' : undefined,
-        aspectRatio: conf.h == null && !hPx ? '1/1' : undefined,
+        aspectRatio:
+          conf.h == null && !hPx ? '1/1' : undefined,
         borderRadius: rounded ? 'var(--radius)' : 0,
         perspective: slides.length > 1 ? '1400px' : undefined,
       }}
     >
-      {current ? (
-        flipping && prev ? (
-          <div className="deco-flip-stage">
-            <div className="deco-flip-page deco-flip-back">
-              {renderSlide(current, true)}
-            </div>
+      {/* 모든 이미지를 유지해 다시 로드되면서 번쩍이는 현상 방지 */}
+      {slides.length > 0 ? (
+        slides.map((sl, i) => {
+          const active = i === currentIdx;
+          const outgoing = flipping && i === prevIdx;
+          const visible = active || outgoing;
 
+          const canClick =
+            active &&
+            !flipping &&
+            !editOn &&
+            !!sl.link;
+
+          const activate = canClick
+            ? () => goToLink(sl.link)
+            : undefined;
+
+          return (
             <div
-              className="deco-flip-page deco-flip-front is-flipping"
-              style={{ animationDuration: `${FLIP_MS}ms` }}
+              key={sl.id}
+              className={`deco-flip-page ${
+                outgoing ? 'is-flipping' : ''
+              }`}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                opacity: visible ? 1 : 0,
+                zIndex: outgoing ? 2 : active ? 1 : 0,
+                pointerEvents: canClick ? 'auto' : 'none',
+                animationDuration: outgoing
+                  ? `${FLIP_MS}ms`
+                  : undefined,
+              }}
             >
-              {renderSlide(prev, false)}
+              {fit === 'contain' ? (
+                <ContainImg
+                  fileRef={sl.imgId}
+                  rounded={rounded}
+                  onActivate={activate}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    cursor: activate
+                      ? 'var(--cur-pointer,pointer)'
+                      : undefined,
+                  }}
+                  onClick={activate}
+                >
+                  <CroppedBlobImg
+                    fileRef={sl.imgId}
+                    crop={sl.crop}
+                    ph=""
+                  />
+                </div>
+              )}
             </div>
-          </div>
-        ) : (
-          <div className="deco-flip-page deco-flip-single">
-            {renderSlide(current, true)}
-          </div>
-        )
+          );
+        })
       ) : (
-        <div className="ph" style={{ position: 'absolute', inset: 0 }}>
+        <div
+          className="ph"
+          style={{ position: 'absolute', inset: 0 }}
+        >
           <span style={{ fontSize: 10 }}>
-            {isAdmin ? 'DECO — 편집모드에서 우클릭 → 설정' : 'DECO'}
+            {isAdmin
+              ? 'DECO — 편집모드에서 우클릭 → 설정'
+              : 'DECO'}
           </span>
         </div>
       )}
 
+      {/* 슬라이드 표시점 */}
       {slides.length > 1 && !editOn && (
-        <div className="deco-dots" onClick={e => e.stopPropagation()}>
+        <div
+          className="deco-dots"
+          style={{ zIndex: 5 }}
+          onClick={e => e.stopPropagation()}
+        >
           {slides.map((sl, i) => (
             <i
               key={sl.id}
-              className={i === idx ? 'on' : ''}
+              className={i === currentIdx ? 'on' : ''}
               onClick={() => startFlip(i)}
             />
           ))}
         </div>
       )}
 
+      {/* 이미지 설정 모달 */}
       <div onClick={e => e.stopPropagation()}>
         <Modal
           open={open}
           onClose={() => setOpen(false)}
           small
           title="장식 이미지"
-          desc="여러 장을 넣으면 순서대로 넘어갑니다 — 위치 크롭은 현재 위젯 비율 기준, 원본은 잘리지 않음"
+          desc="여러 장을 넣으면 책장처럼 넘어갑니다. 이미지의 위치와 크기는 설정에서 조정할 수 있습니다."
         >
-          {open && <DecoEditor conf={conf} onClose={() => setOpen(false)} />}
+          {open && (
+            <DecoEditor
+              conf={conf}
+              onClose={() => setOpen(false)}
+            />
+          )}
         </Modal>
       </div>
     </div>
   );
 }
+
 
 /* ---------- 스티커 메모 미니보드 (4.6) — 읽기 전용 축소 보드, 클릭 시 /memo ---------- */
 export function MemoBoardWidget() {
