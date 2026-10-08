@@ -44,7 +44,6 @@ export const RESET_CONTENT: ResetGroup[] = [
   { key: 'threads', label: '감상타래', keys: ['ohome.threads.v1'] },
   { key: 'diary', label: '다이어리', keys: ['ohome.diary.v1'] },
   { key: 'memo', label: '메모장', keys: ['ohome.memo.v1'] },
-  { key: 'comm', label: '커미션·신청자', keys: ['ohome.comm.v1', 'ohome.commapply.v1'] },
   { key: 'sched', label: '스케줄러 일정', keys: ['ohome.sched.v1'] },
   { key: 'notif', label: '알림', keys: ['ohome.notif.v1'] },
 ];

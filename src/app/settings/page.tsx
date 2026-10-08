@@ -2189,12 +2189,6 @@ function MenuPane() {
           <button className={ms.backupView === 'list' ? 'on' : ''} onClick={() => patch({ backupView: 'list' })}>기본: 리스트</button>
         </div>
       );
-      case '/comm': return (
-        <div className="mini-seg">
-          <button className={commSet.ratio === '3:4' ? 'on' : ''} onClick={() => patchComm({ ratio: '3:4' })}>비율 3:4</button>
-          <button className={commSet.ratio === '4:3' ? 'on' : ''} onClick={() => patchComm({ ratio: '4:3' })}>비율 4:3</button>
-        </div>
-      );
       // 스케줄러 달 표기 (v1.9) — AUGUST 2026 / 2026.08
       case '/cal': return (
         <div className="mini-seg">
