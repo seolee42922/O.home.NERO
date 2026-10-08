@@ -2008,3 +2008,107 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
     animation-duration:.01ms !important;
   }
 }
+
+
+.gallery-detail-art {
+  min-width: 0;
+  padding: 20px;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.gallery-comments.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  max-height: 700px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.gallery-comments > h4 span {
+  font-size: 11px;
+  color: var(--sub);
+}
+
+.gallery-comment-list {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+}
+
+.gallery-comment-list .cmt {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.gallery-comment-list .cmt p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.gallery-comment-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.gallery-comment-actions button,
+.gallery-reply-notice {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.gallery-comment-form {
+  margin-top: auto;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.gallery-comment-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery-comment-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.gallery-comment-input .btn {
+  flex-shrink: 0;
+}
+
+.gallery-comment-edit {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* 화면이 좁을 때만 댓글을 아래로 */
+@media (max-width: 760px) {
+  .gallery-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery-comments.panel {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    max-height: none;
+  }
+}
+
