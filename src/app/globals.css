@@ -2087,3 +2087,49 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   }
 }
 
+
+/* 갤러리 상세 화면 마무리 보정 */
+
+/* 안쪽 패널의 불필요한 그림자 제거 */
+.gallery-detail-layout > .panel {
+  box-shadow: none;
+}
+
+/* 댓글 영역 */
+.gallery-comments.panel {
+  box-shadow: none;
+  background: var(--panel-solid);
+}
+
+/* 댓글 제목 */
+.gallery-comments.panel > h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin: 0;
+  padding: 16px 20px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  border-bottom: 1px solid var(--line);
+}
+
+/* 댓글 수 */
+.gallery-comments.panel > h4 span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--sub);
+}
+
+/* 댓글 입력 영역 */
+.gallery-comments .gallery-comment-form {
+  padding: 16px 20px;
+  background: var(--panel-solid);
+}
+
+/* 댓글 목록 */
+.gallery-comments .gallery-comment-list {
+  padding: 16px 20px;
+}
