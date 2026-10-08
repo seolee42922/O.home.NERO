@@ -444,7 +444,7 @@ a{color:inherit;text-decoration:none}
 .tc-card .bd .meta{display:block;font-size:calc(11px*var(--fs,1));color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 설명 — 두 줄까지만, 넘치면 말줄임 (전체는 상세에서) */
 .tc-card .bd .desc{font-size:calc(11.5px*var(--fs,1));color:var(--sub);line-height:1.65;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px;
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
 .tc-card .th-actions{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:4px}
 .tc-card .th-actions button{font-size:10px;letter-spacing:.06em;padding:4px 9px;border-radius:7px;background:rgba(15,17,20,.55);color:#fff;transition:.13s}
 .tc-card .th-actions button:hover{background:rgba(15,17,20,.8)}
@@ -545,7 +545,7 @@ a{color:inherit;text-decoration:none}
 .memo-list-item:hover{background:#f0f1f4}
 .memo-list-item .cdot{width:12px;height:12px;border-radius:4px;flex-shrink:0;margin-top:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
 .memo-list-item b{font-size:calc(11px*var(--fs,1));color:var(--faint);font-weight:600;display:block}
-.memo-list-item p{font-size:calc(12px*var(--fs,1));color:#33373e;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.memo-list-item p{font-size:calc(12px*var(--fs,1));color:#33373e;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
 /* 색 선택 칩 (등록/수정 모달) */
 .memo-chips{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .memo-chips .c{width:26px;height:26px;border-radius:8px;cursor:var(--cur-pointer,pointer);box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);transition:.13s}
