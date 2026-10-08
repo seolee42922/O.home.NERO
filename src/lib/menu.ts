@@ -13,6 +13,7 @@ export const FEATURES: { href: string; label: string }[] = [
   { href: '/chars', label: '캐릭터' },
   { href: '/rels', label: '자관' },
   { href: '/rp', label: '역극' },
+  { href: '/trpg-home', label: 'TRPG' },
   { href: '/board', label: '리스트' },
   { href: '/gallery', label: '갤러리' },
   { href: '/loadb', label: '로드비' },
@@ -33,8 +34,8 @@ export const DEFAULT_MENU: MenuItem[] = [
     label: '자놀',
     children: [
       { label: '캐릭터', href: '/chars' },
-      { label: '자관', href: '/rels' },
       { label: '역극', href: '/rp' },
+      { label: 'TRPG', href: '/trpg-home' },
     ],
   },
   {
@@ -43,15 +44,6 @@ export const DEFAULT_MENU: MenuItem[] = [
       { label: '리스트', href: '/board' },
       { label: '갤러리', href: '/gallery' },
       { label: '로드비', href: '/loadb' },
-    ],
-  },
-  {
-    label: 'TRPG',
-    children: [
-      { label: '캐릭터', href: '/tchars' },
-      { label: '로그 백업', href: '/trpg' },
-      { label: '도토리', href: '/dotori' },
-      { label: '플레이기록', href: '/playlog' },
     ],
   },
   {
