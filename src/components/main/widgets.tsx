@@ -1,6 +1,6 @@
 'use client';
 // 메인 위젯 렌더러 (4.0) — DIARY/LATEST/UPCOMING 등은 해당 기능(2·3차) 전까지 데모 데이터
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WidgetConf, useMainStore, WIDGET_META, decoSlides } from '@/lib/mainStore';
 import { useAuth } from '@/lib/auth';
@@ -17,7 +17,7 @@ import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED, BackupPost, BACKUP_SEED } from '@/lib/galleryStore';
 import { DiaryPost, DIARY_SEED, Mood, MOOD_SEED, moodTint } from '@/lib/diaryStore';
-import { useSched, eventColor } from '@/lib/schedStore';
+import { useSched, eventColor, eventOnDate } from '@/lib/schedStore';
 import { StickyMemo, MEMO_SEED, MEMO_SIZE_W, useMemoSettings } from '@/lib/memoStore';
 import { BlobImg, useBlobUrl } from '@/lib/blobStore';
 import { normalizeInternalLink } from '@/lib/link';
@@ -327,49 +327,140 @@ export function TodoWidget({ conf }: { conf: WidgetConf }) {
 }
 
 /* ---------- UPCOMING (다가오는 일정 — 스케줄러 실데이터, 4.12) ---------- */
+
+/* ---------- UPCOMING: 월간 미니 스케줄러 ---------- */
 export function UpcomingWidget() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
-  const { st } = useSched();   // 인자 없이 = 모든 스케줄러 (v2.0 — 어느 것이든 다가오는 일정은 다가온다)
-  /* 메뉴에서 비공개로 둔 스케줄러는 위젯에도 안 나온다 (v2.0).
-     스케줄러를 여러 개 만들 수 있으므로 **일정마다 그 스케줄러 기준**으로 따지고,
-     볼 수 있는 스케줄러가 하나도 없을 때만 위젯을 통째로 감춘다. */
+  const { st } = useSched();
   const [menuSet] = useMenuSettings();
   const { list } = useSections();
-  const viewer = { loggedIn: !!user, isAdmin, id: user?.id };
-  const seeSec = (secId?: string) => canViewHref(menuSet, sectionHref('sched', secId ?? MAIN_SEC), viewer);
+
+  const [view, setView] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+
+  const viewer = {
+    loggedIn: !!user,
+    isAdmin,
+    id: user?.id,
+  };
+
+  const seeSec = (secId?: string) =>
+    canViewHref(
+      menuSet,
+      sectionHref('sched', secId ?? MAIN_SEC),
+      viewer
+    );
+
   const canSee = list('sched').some(s => seeSec(s.id));
+
+  const events = st.events.filter(e =>
+    seeSec(e.secId) &&
+    (isAdmin ||
+      e.visibility === 'public' ||
+      (e.visibility === 'member' && !!user))
+  );
+
+  const firstDay = new Date(view.year, view.month, 1);
+  const startDay = firstDay.getDay();
+  const daysInMonth = new Date(
+    view.year, view.month + 1, 0
+  ).getDate();
+
   const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  // 오늘 포함 이후 일정 — 매년 반복은 올해 날짜로 환산해 가장 가까운 3개
-  const upcoming = st.events
-    .filter(e => seeSec(e.secId))
-    .filter(e => isAdmin || e.visibility === 'public' || (e.visibility === 'member' && !!user))
-    .map(e => {
-      let d = e.start;
-      if (e.repeat === 'yearly') {
-        const thisYear = `${today.getFullYear()}-${e.start.slice(5)}`;
-        d = thisYear >= todayStr ? thisYear : `${today.getFullYear() + 1}-${e.start.slice(5)}`;
-      }
-      return { e, d };
-    })
-    .filter(x => x.d >= todayStr)
-    .sort((a, b) => a.d.localeCompare(b.d))
-    .slice(0, 3);
-  if (!canSee) return null;   // 메뉴가 비공개면 위젯 자체를 띄우지 않는다 (v2.0)
+  const todayKey = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  const moveMonth = (delta: number) => {
+    const next = new Date(
+      view.year, view.month + delta, 1
+    );
+
+    setView({
+      year: next.getFullYear(),
+      month: next.getMonth(),
+    });
+  };
+
+  const cells = Array.from(
+    { length: Math.ceil((startDay + daysInMonth) / 7) * 7 },
+    (_, i) => {
+      const date = new Date(view.year, view.month, i - startDay + 1);
+      const key = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+      ].join('-');
+
+      return {
+        day: date.getDate(),
+        key,
+        current: date.getMonth() === view.month,
+        events: events.filter(e => eventOnDate(e, key)),
+      };
+    }
+  );
+
+  if (!canSee) return null;
+
   return (
-    <div className="panel widget" style={{ cursor: 'var(--cur-pointer,pointer)' }} onClick={() => router.push('/cal')}>
-      <h4>UPCOMING <span className="more">더보기 ›</span></h4>
-      {upcoming.map(({ e, d }) => (
-        <div key={e.id} className="dday-row">
-          <span>{d.slice(5).replace('-', '.')} · {e.title}</span>
-          <b style={{ fontSize: 11, color: eventColor(e, st.cats) }}>●</b>
+    <div className="panel widget upcoming-calendar">
+      <div className="upcal-head">
+        <h4
+          onClick={() => router.push('/cal')}
+          style={{ cursor: 'pointer', margin: 0 }}
+        >
+          SCHEDULER
+        </h4>
+
+        <div className="upcal-nav">
+          <button onClick={() => moveMonth(-1)}>‹</button>
+          <span>
+            {view.year}.{String(view.month + 1).padStart(2, '0')}
+          </span>
+          <button onClick={() => moveMonth(1)}>›</button>
         </div>
-      ))}
-      {upcoming.length === 0 && <p className="hint">다가오는 일정이 없습니다</p>}
+      </div>
+
+      <div className="upcal-grid">
+        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+          <div key={d} className="upcal-dow">{d}</div>
+        ))}
+
+        {cells.map(c => (
+          <div
+            key={c.key}
+            className={[
+              'upcal-day',
+              !c.current ? 'dim' : '',
+              c.key === todayKey ? 'today' : '',
+            ].join(' ')}
+            title={c.events.map(e => e.title).join('\n')}
+            onClick={() => router.push('/cal')}
+          >
+            <span>{c.day}</span>
+            <div className="upcal-dots">
+              {c.events.slice(0, 3).map(e => (
+                <i
+                  key={e.id}
+                  style={{
+                    background: eventColor(e, st.cats),
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
+
 
 /* ---------- 자유 텍스트 (v1.9 개편 — 사용자 확정) ----------
    패널 없이 문구만 — 폰트·크기·색·정렬을 지정해 장식처럼 아무 곳에나 배치(위젯 드래그·크기 공통).
@@ -480,70 +571,171 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rounded = (conf.settings.rounded as boolean) ?? true;
-  const fit = (conf.settings.fit as 'cover' | 'contain') ?? 'cover';   // 꽉 채움(잘림) / 비율 유지 (v1.9)
-  // 여러 장 슬라이드 (v2.0) — 한 장만 넣던 옛 저장분도 같은 목록으로 읽힌다
+  const fit = (conf.settings.fit as 'cover' | 'contain') ?? 'cover';
   const slides = decoSlides(conf.settings);
   const sec = (conf.settings.interval as number) ?? 5;
+
   const [idx, setIdx] = useState(0);
-  const cur = slides[Math.min(idx, slides.length - 1)];
-  // 자동 넘김 — 편집 중이거나 설정 모달이 열려 있으면 멈춘다 (위치를 맞추는 중이라)
-  useEffect(() => {
-    if (slides.length < 2 || editOn || open) return;
-    const t = setInterval(() => setIdx(i => (i + 1) % slides.length), Math.max(1, sec) * 1000);
-    return () => clearInterval(t);
-  }, [slides.length, sec, editOn, open]);
-  useEffect(() => { if (idx >= slides.length) setIdx(0); }, [slides.length, idx]);
-  useEditEvent(conf.id, () => setOpen(true));   // 편집은 편집모드 우클릭 「설정」 전용 (v1.9 사용자 확정)
-  // 링크 이동 (v1.9 — 이미지+링크를 위젯 테두리 없이) — 링크는 장면마다 따로 (v2.0)
-  const onBody = () => {
-    if (editOn) return;
-    if (cur?.link) {
-      const l = normalizeInternalLink(cur.link);
-      if (/^https?:\/\//.test(l)) window.open(l, '_blank');
-      else router.push(l);
+  const [prevIdx, setPrevIdx] = useState<number | null>(null);
+  const [flipping, setFlipping] = useState(false);
+
+  const FLIP_MS = 950;
+
+  const currentIdx = slides.length ? Math.min(idx, slides.length - 1) : 0;
+  const current = slides[currentIdx];
+  const prev =
+    prevIdx == null || !slides.length
+      ? null
+      : slides[Math.min(prevIdx, slides.length - 1)];
+
+  const goToLink = useCallback((link?: string) => {
+    if (editOn || !link) return;
+    const l = normalizeInternalLink(link);
+    if (/^https?:\/\//.test(l)) window.open(l, '_blank');
+    else router.push(l);
+  }, [editOn, router]);
+
+  const renderSlide = useCallback((
+    sl: { imgId: string; crop?: CropValue; link?: string } | undefined,
+    clickable: boolean
+  ) => {
+    if (!sl) return null;
+    const activate = clickable && sl.link ? () => goToLink(sl.link) : undefined;
+
+    if (fit === 'contain') {
+      return (
+        <ContainImg
+          fileRef={sl.imgId}
+          rounded={rounded}
+          onActivate={activate}
+        />
+      );
     }
-  };
-  // 직접 정한 크기 (v2.0 사용자 요청) — 비우면 지금까지처럼 자리(그리드 칸)를 따라간다
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          cursor: activate ? 'var(--cur-pointer,pointer)' : undefined,
+        }}
+        onClick={activate}
+      >
+        <CroppedBlobImg fileRef={sl.imgId} crop={sl.crop} ph="" />
+      </div>
+    );
+  }, [fit, rounded, goToLink]);
+
+  const startFlip = useCallback((nextIdx: number) => {
+    if (slides.length < 2) return;
+
+    const normalized =
+      ((nextIdx % slides.length) + slides.length) % slides.length;
+
+    if (flipping || normalized === currentIdx) return;
+
+    setPrevIdx(currentIdx);
+    setIdx(normalized);
+    setFlipping(true);
+  }, [slides.length, flipping, currentIdx]);
+
+  // 자동 넘김
+  useEffect(() => {
+    if (slides.length < 2 || editOn || open || flipping) return;
+
+    const t = window.setTimeout(() => {
+      startFlip((currentIdx + 1) % slides.length);
+    }, Math.max(2, sec) * 1000);
+
+    return () => window.clearTimeout(t);
+  }, [slides.length, sec, editOn, open, flipping, currentIdx, startFlip]);
+
+  // 넘김 애니메이션 종료 처리
+  useEffect(() => {
+    if (!flipping) return;
+
+    const t = window.setTimeout(() => {
+      setFlipping(false);
+      setPrevIdx(null);
+    }, FLIP_MS);
+
+    return () => window.clearTimeout(t);
+  }, [flipping]);
+
+  // 슬라이드 개수 변경 시 인덱스 보정
+  useEffect(() => {
+    if (idx >= slides.length) setIdx(0);
+    if (prevIdx != null && prevIdx >= slides.length) setPrevIdx(null);
+  }, [slides.length, idx, prevIdx]);
+
+  useEditEvent(conf.id, () => setOpen(true));
+
   const wPx = conf.settings.wPx as number | undefined;
   const hPx = conf.settings.hPx as number | undefined;
-  const canGo = !editOn && !!cur?.link;
+
   return (
-    <div className="deco-wgt"
+    <div
+      className="deco-wgt"
       style={{
-        position: 'relative', overflow: 'hidden',
-        width: wPx ? `${wPx}px` : '100%', maxWidth: '100%',
-        height: hPx ? `${hPx}px` : '100%', minHeight: hPx ? undefined : 80,
+        position: 'relative',
+        overflow: 'hidden',
+        width: wPx ? `${wPx}px` : '100%',
+        maxWidth: '100%',
+        height: hPx ? `${hPx}px` : '100%',
+        minHeight: hPx ? undefined : 80,
         margin: wPx ? '0 auto' : undefined,
-        aspectRatio: conf.h == null && !hPx ? '1/1' : undefined, // 크기 동결 전 기본 정사각
+        aspectRatio: conf.h == null && !hPx ? '1/1' : undefined,
         borderRadius: rounded ? 'var(--radius)' : 0,
-      }}>
-      {/* 클릭은 이미지 위에서만 (v2.0 사용자 요청) — 예전에는 위젯 칸 전체가 눌렸다.
-          꽉 채움은 이미지가 칸을 채우므로 그대로 칸 전체, 비율 유지는 그림 픽셀 기준(투명 제외) */}
-      {cur
-        ? (fit === 'contain'
-          ? <ContainImg key={cur.id} fileRef={cur.imgId} rounded={rounded} onActivate={canGo ? onBody : undefined} />
-          : (
-            <div style={{ position: 'absolute', inset: 0, cursor: canGo ? 'var(--cur-pointer,pointer)' : undefined }}
-              onClick={canGo ? onBody : undefined}>
-              <CroppedBlobImg key={cur.id} fileRef={cur.imgId} crop={cur.crop} ph="" />
+        perspective: slides.length > 1 ? '1400px' : undefined,
+      }}
+    >
+      {current ? (
+        flipping && prev ? (
+          <div className="deco-flip-stage">
+            <div className="deco-flip-page deco-flip-back">
+              {renderSlide(current, true)}
             </div>
-          ))
-        : (
-          <div className="ph" style={{ position: 'absolute', inset: 0 }}>
-            <span style={{ fontSize: 10 }}>{isAdmin ? 'DECO — 편집모드에서 우클릭 → 설정' : 'DECO'}</span>
+
+            <div
+              className="deco-flip-page deco-flip-front is-flipping"
+              style={{ animationDuration: `${FLIP_MS}ms` }}
+            >
+              {renderSlide(prev, false)}
+            </div>
           </div>
-        )}
-      {/* 여러 장일 때만 지금 몇 번째인지 표시 — 눌러서 바로 넘길 수도 있다 (v2.0) */}
+        ) : (
+          <div className="deco-flip-page deco-flip-single">
+            {renderSlide(current, true)}
+          </div>
+        )
+      ) : (
+        <div className="ph" style={{ position: 'absolute', inset: 0 }}>
+          <span style={{ fontSize: 10 }}>
+            {isAdmin ? 'DECO — 편집모드에서 우클릭 → 설정' : 'DECO'}
+          </span>
+        </div>
+      )}
+
       {slides.length > 1 && !editOn && (
         <div className="deco-dots" onClick={e => e.stopPropagation()}>
           {slides.map((sl, i) => (
-            <i key={sl.id} className={i === idx ? 'on' : ''} onClick={() => setIdx(i)} />
+            <i
+              key={sl.id}
+              className={i === idx ? 'on' : ''}
+              onClick={() => startFlip(i)}
+            />
           ))}
         </div>
       )}
+
       <div onClick={e => e.stopPropagation()}>
-        <Modal open={open} onClose={() => setOpen(false)} small title="장식 이미지"
-          desc="여러 장을 넣으면 순서대로 넘어갑니다 — 위치 크롭은 현재 위젯 비율 기준, 원본은 잘리지 않음">
+        <Modal
+          open={open}
+          onClose={() => setOpen(false)}
+          small
+          title="장식 이미지"
+          desc="여러 장을 넣으면 순서대로 넘어갑니다 — 위치 크롭은 현재 위젯 비율 기준, 원본은 잘리지 않음"
+        >
           {open && <DecoEditor conf={conf} onClose={() => setOpen(false)} />}
         </Modal>
       </div>

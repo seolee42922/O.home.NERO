@@ -1399,9 +1399,82 @@ function FaviconControl() {
           e.target.value = '';
           if (!f) return;
           // 올리기가 막히면 아무 말 없이 끝나지 않게 (v2.0 — 프로필 사진에서 겪은 것과 같은 이유)
-          try { set({ favicon: await putBlob(f) }); } catch (err) {
-            toast(`아이콘을 저장소에 올리지 못했습니다 — ${err instanceof Error ? err.message : String(err)}`);
+          try {
+            const roundedFile = await new Promise<File>((resolve, reject) => {
+              const img = new Image();
+              const url = URL.createObjectURL(f);
+
+              img.onload = () => {
+                try {
+                  const size = 256;
+                  const canvas = document.createElement('canvas');
+                  canvas.width = size;
+                  canvas.height = size;
+
+                  const ctx = canvas.getContext('2d');
+                  if (!ctx) throw new Error('이미지 처리 실패');
+
+                  // 이미지의 네 모서리를 둥글게 잘라냄
+                  const radius = 52;
+
+                  ctx.beginPath();
+                  ctx.roundRect(0, 0, size, size, radius);
+                  ctx.clip();
+
+                  // 정사각형에 꽉 차도록 이미지 중앙 기준 배치
+                  const scale = Math.max(
+                    size / img.naturalWidth,
+                    size / img.naturalHeight
+                  );
+
+                  const w = img.naturalWidth * scale;
+                  const h = img.naturalHeight * scale;
+
+                  ctx.drawImage(
+                    img,
+                    (size - w) / 2,
+                    (size - h) / 2,
+                    w,
+                    h
+                  );
+
+                  canvas.toBlob(blob => {
+                    URL.revokeObjectURL(url);
+
+                    if (!blob) {
+                      reject(new Error('PNG 변환 실패'));
+                      return;
+                    }
+
+                    resolve(new File(
+                      [blob],
+                      'favicon-rounded.png',
+                      { type: 'image/png' }
+                    ));
+                  }, 'image/png');
+                } catch (error) {
+                  URL.revokeObjectURL(url);
+                  reject(error);
+                }
+              };
+
+              img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('이미지를 읽을 수 없습니다'));
+              };
+
+              img.src = url;
+            });
+
+            set({ favicon: await putBlob(roundedFile) });
+          } catch (err) {
+            toast(
+              `아이콘을 저장하지 못했습니다 — ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
           }
+
         }} />
       <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
         onClick={() => document.getElementById('siteFavicon')?.click()}>
