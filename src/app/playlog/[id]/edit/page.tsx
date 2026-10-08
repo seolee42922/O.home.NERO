@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { useSectionTitle } from '@/lib/sectionStore';
 import { PlayRecord, PLAYLOG_SEED } from '@/lib/galleryStore';
-import { PlaylogForm } from '@/components/trpg/PlaylogForm';
+import { PlaylogForm } from '@/components/chars/PlaylogForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
 

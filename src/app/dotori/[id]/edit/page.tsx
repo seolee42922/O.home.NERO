@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { useSectionTitle } from '@/lib/sectionStore';
 import { DotoriItem, DOTORI_SEED } from '@/lib/galleryStore';
-import { DotoriForm } from '@/components/trpg/DotoriForm';
+import { DotoriForm } from '@/components/chars/DotoriForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
 

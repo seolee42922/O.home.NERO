@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
-import { TCharForm } from '@/components/trpg/TCharForm';
+import { TCharForm } from '@/components/chars/TCharForm';
 
 export default function TCharEditPage() {
   const { id } = useParams<{ id: string }>();

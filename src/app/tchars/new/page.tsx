@@ -2,7 +2,7 @@
 // TRPG 캐릭터 등록 (v1.9 — 페이지형)
 import { useAuth } from '@/lib/auth';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
-import { TCharForm } from '@/components/trpg/TCharForm';
+import { TCharForm } from '@/components/chars/TCharForm';
 
 export default function TCharNewPage() {
   const { isAdmin } = useAuth();
